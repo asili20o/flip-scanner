@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flip Scanner – Regina MLS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap');
+:root{
+  --bg:#f5f6fa;--surface:#ffffff;--surface2:#f0f2f7;--border:#e2e5ed;
+  --accent:#f0c040;--green:#3de8a0;--red:#f55050;--orange:#f0a040;
+  --text:#1a1f2e;--muted:#7b8494;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+
+header{
+  padding:24px 40px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:#1a1f2e;
+}
+.logo{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:#f0c040;letter-spacing:3px;}
+.logo span{color:var(--muted);font-weight:400;}
+.tagline{font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:1px;text-transform:uppercase;}
+.stats-bar{display:flex;gap:28px;font-family:'Space Mono',monospace;}
+.stat-item{text-align:center;}
+.stat-val{font-size:22px;font-weight:700;color:var(--accent);display:block;}
+.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+.upload-wrap{max-width:800px;margin:60px auto;padding:0 24px;}
+.drop-zone{
+  border:2px dashed var(--border);border-radius:14px;padding:60px 32px;
+  text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);
+}
+.drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:rgba(240,192,64,.04);}
+.drop-icon{font-size:52px;margin-bottom:16px;display:block;}
+.drop-title{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;margin-bottom:10px;}
+.drop-sub{font-size:13px;color:var(--muted);line-height:1.7;}
+.drop-sub b{color:var(--accent);}
+#fileInput{display:none;}
+
+.toolbar{max-width:1300px;margin:20px auto 0;padding:0 24px;}
+.filter-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:20px;}
+.filter-bar label{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.filter-bar select,.filter-bar input[type=range]{
+  background:#ffffff;border:1px solid var(--border);color:var(--text);
+  padding:7px 12px;border-radius:6px;font-size:13px;outline:none;cursor:pointer;
+}
+.score-display{font-family:'Space Mono',monospace;font-size:12px;color:var(--accent);min-width:24px;}
+.btn-reset{background:#fff;
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  padding:7px 16px;border-radius:6px;font-size:12px;cursor:pointer;
+  font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:1px;
+  transition:all .15s;
+}
+.btn-reset:hover{border-color:var(--red);color:var(--red);}
+
+#cardArea{max-width:1300px;margin:0 auto;padding:0 24px 80px;}
+.section-hdr{
+  font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;
+  text-transform:uppercase;margin:32px 0 14px;display:flex;align-items:center;gap:12px;
+}
+.section-hdr::after{content:'';flex:1;height:1px;background:#e2e5ed;}
+
+/* CARD */
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:18px 20px;margin-bottom:10px;
+  display:flex;gap:16px;align-items:flex-start;
+  transition:border-color .15s,transform .1s;
+}
+.card:hover{border-color:#c5cad6;transform:translateX(2px);}
+.card.A{border-left:3px solid var(--red);}
+.card.B{border-left:3px solid var(--orange);}
+.card.C{border-left:3px solid var(--green);}
+
+.badge{
+  width:54px;height:54px;border-radius:10px;flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'Space Mono',monospace;font-weight:700;font-size:19px;
+}
+.badge-lbl{font-size:8px;letter-spacing:1px;opacity:.8;margin-top:1px;}
+.badge.A{background:rgba(245,80,80,.1);color:#d93535;border:1px solid rgba(245,80,80,.3);}
+.badge.B{background:rgba(240,160,64,.1);color:#c97a00;border:1px solid rgba(240,160,64,.3);}
+.badge.C{background:rgba(61,232,160,.1);color:#1a9e65;border:1px solid rgba(61,232,160,.3);}
+.badge.D{background:rgba(107,114,128,.08);color:#6b7280;border:1px solid rgba(107,114,128,.2);}
+
+.card-body{flex:1;min-width:0;}
+.card-top{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;}
+.card-address{font-weight:700;font-size:16px;color:var(--text);}
+.card-mls{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);}
+
+/* THE BUTTON */
+.btn-listing{
+  display:inline-block;
+  background:var(--accent);color:#0d0f14;
+  font-family:'Space Mono',monospace;font-size:11px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+  border:none;border-radius:5px;padding:5px 14px;
+  cursor:pointer;text-decoration:none;
+  transition:background .15s;
+  white-space:nowrap;
+}
+.btn-listing:hover{background:#ffd966;}
+
+.card-meta{font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;}
+.flags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+.flag{font-size:10px;padding:3px 8px;border-radius:20px;font-family:'Space Mono',monospace;font-weight:700;text-transform:uppercase;}
+.flag.hot{background:rgba(245,80,80,.1);color:#c83030;border:1px solid rgba(245,80,80,.25);}
+.flag.warn{background:rgba(240,160,64,.1);color:#b86800;border:1px solid rgba(240,160,64,.25);}
+.flag.ok{background:rgba(61,232,160,.1);color:#1a8a55;border:1px solid rgba(61,232,160,.2);}
+.flag.info{background:rgba(107,114,128,.08);color:#6b7280;border:1px solid rgba(107,114,128,.2);}
+.remark{font-size:11px;color:#7b8494;font-style:italic;border-left:2px solid var(--border);padding-left:8px;line-height:1.5;margin-top:4px;}
+
+.card-nums{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:165px;}
+.num-row{text-align:right;}
+.num-val{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;}
+.num-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.pill{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;padding:3px 10px;border-radius:5px;}
+.pill.hot{background:rgba(245,80,80,.1);color:#c83030;}
+.pill.warm{background:rgba(240,160,64,.1);color:#b86800;}
+.pill.fair{background:rgba(107,114,128,.08);color:#6b7280;}
+.arv{font-size:11px;color:var(--muted);}
+.arv b{color:#1a9e65;font-family:'Space Mono',monospace;}
+.reno-note{font-size:10px;color:#7b8494;text-align:right;}
+
+.dom-wrap{display:flex;align-items:center;gap:6px;}
+.dom-bar{width:50px;height:3px;background:#dde1ea;border-radius:2px;overflow:hidden;}
+.dom-fill{height:100%;border-radius:2px;}
+
+.empty{text-align:center;padding:80px;color:var(--muted);font-family:'Space Mono',monospace;font-size:13px;}
+
+@media(max-width:680px){
+  header{flex-direction:column;gap:14px;padding:18px;}
+  .card{flex-wrap:wrap;}
+  .card-nums{display:none;}
+  .stats-bar{gap:14px;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">FLIP SCANNER <span>// Regina MLS</span></div>
+    <div class="tagline">Drop CSV &rarr; Instant scores &bull; Remarks analyzed &bull; Basement risk adjusted</div>
+  </div>
+  <div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat-item"><span class="stat-val" id="sTotal">0</span><span class="stat-lbl">Scanned</span></div>
+    <div class="stat-item"><span class="stat-val" id="sHot" style="color:var(--red)">0</span><span class="stat-lbl">Hot</span></div>
+    <div class="stat-item"><span class="stat-val" id="sWarm" style="color:var(--orange)">0</span><span class="stat-lbl">Warm</span></div>
+    <div class="stat-item"><span class="stat-val" id="sWatch">0</span><span class="stat-lbl">Watch</span></div>
+  </div>
+</header>
+
+<div id="uploadSection">
+  <div class="upload-wrap">
+    <div class="drop-zone" id="dropZone">
+      <span class="drop-icon">&#128194;</span>
+      <div class="drop-title">Drop your MLS CSV export here</div>
+      <div class="drop-sub">
+        Agent Single Line export from Paragon &bull; Active only &bull; Detached &bull; Max yr built 1985<br>
+        Include: <b>Year Built &bull; REALTOR Remarks &bull; Public Remarks</b>
+      </div>
+      <input type="file" id="fileInput" accept=".csv">
+    </div>
+  </div>
+</div>
+
+<div id="toolbar" class="toolbar" style="display:none">
+  <div class="filter-bar">
+    <label>Min Score</label>
+    <input type="range" id="minScore" min="0" max="90" value="0" style="width:100px">
+    <span class="score-display" id="scoreDisplay">0</span>
+    <label>Max Price</label>
+    <select id="maxPrice">
+      <option value="999999">Any</option>
+      <option value="150000">$150K</option>
+      <option value="200000">$200K</option>
+      <option value="275000">$275K</option>
+      <option value="350000">$350K</option>
+      <option value="425000">$425K</option>
+    </select>
+    <label>Sort</label>
+    <select id="sortBy">
+      <option value="score">Score</option>
+      <option value="dom">DOM (newest)</option>
+      <option value="discount">Discount</option>
+      <option value="profit">Est. Profit</option>
+    </select>
+    <button class="btn-reset" id="btnReset">&#8617; New CSV</button>
+  </div>
+</div>
+
+<div id="cardArea"></div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const BASELINES = {
+  'Washington Park':147,'General Hospital':216,'Dieppe Place':217,'Glen Elm Park':235,
+  'Rosemont':246,'Coronation Park':249,'Broders Annex':250,'Eastview RG':273,
+  'Cathedral RG':276,'Churchill Downs':284,'Pioneer Village':287,'Wood Meadows':299,
+  'Normanview':304,'Hillsdale':310,'McCarthy Park':311,'Uplands':314,'Arnhem Place':316,
+  'Westerra':317,'Lakeview RG':322,'Whitmore Park':322,'Normanview West':326,
+  'Glencairn Village':327,'Argyle Park':337,'Eastbrook':339,'Albert Park':347,
+  'Crescents':347,'The Towns':347,'Windsor Park':350,'Mount Royal RG':362,
+  'Douglas Place':340,'Greens on Gardiner':374,'Harbour Landing':394,
+  'Wascana View':399,'The Creeks':510
+};
+const FLIP_ZONES = new Set([
+  'Douglas Place','Whitmore Park','Lakeview RG','Broders Annex','Eastview RG',
+  'General Hospital','Cathedral RG','Hillsdale','Al Ritchie','Arnhem Place',
+  'Rosemont','Coronation Park','Crescents','Mount Royal RG','Glen Elm Park'
+]);
+const SIG_STRONG  = ['as is','as-is','sold as is','estate sale','priced to sell','priced below','motivated seller'];
+const SIG_FIXER   = ['contractor','handyman','fixer','tlc','needs work','sweat equity','needs updating','needs tlc'];
+const SIG_BLOCK   = ['block basement','block walls','rubble','concrete block','stone foundation','block foundation'];
+const SIG_RENTED  = ['rented furnace','rented hwt','rented water heater','reliance','enercare'];
+const SIG_QUICK   = ['quick possession','immediate possession','flexible possession'];
+const SIG_ESTATE  = ['estate','executor','power of attorney'];
+
+// ── CSV PARSER ───────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (!lines.length) return [];
+  const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+  return lines.slice(1).map(line => {
+    const vals = []; let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') inQ = !inQ;
+      else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    vals.push(cur.trim());
+    const obj = {};
+    headers.forEach((h,i) => obj[h] = (vals[i]||'').replace(/^"|"$/g,'').trim());
+    return obj;
+  });
+}
+
+function n(s) { return parseFloat((s||'').replace(/[$,\s]/g,'')) || 0; }
+function hit(list, text) { return list.filter(w => text.includes(w)); }
+
+// ── SCORER ───────────────────────────────────────────────────────────────────
+function scoreRow(row) {
+  const price    = n(row['Current Price']);
+  const sqft     = n(row['SqFt Total']);
+  const beds     = parseInt(row['Beds Total']) || 0;
+  const baths    = parseInt(row['Baths Total']) || 0;
+  const dom      = parseInt(row['DOM']) || 0;
+  const yrBlt    = parseInt(row['Year Built']) || 0;
+  const neigh    = (row['Sub-Location/Neighbourhood'] || row['Neighbourhood'] || '').trim();
+  const subType  = (row['Property Sub Type'] || '').trim();
+  const stat     = (row['Stat'] || '').trim();
+  const address  = (row['Address'] || '').trim();
+  const mlsNum   = (row['MLS\u00ae#'] || row['MLS#'] || '').trim();
+  const kitchens = parseInt(row['# Kitchens']) || 1;
+  const rRem     = row['REALTOR\u00ae Remarks'] || row['Realtor Remarks'] || row['Member Only Remarks'] || '';
+  const pRem     = row['Public Remarks'] || '';
+  const allRem   = (rRem + ' ' + pRem).toLowerCase();
+  const hasRem   = allRem.trim().length > 10;
+
+  if (stat !== 'A') return null;
+  if (!subType.toLowerCase().includes('detach')) return null;
+  if (price < 80000 || price > 450000) return null;
+  if (sqft < 500) return null;
+
+  const ppsf     = price / sqft;
+  const base     = BASELINES[neigh] || 300;
+  const discount = (base - ppsf) / base;
+
+  // Basement risk
+  let bLow=0, bHigh=0, bFlag=null;
+  if      (yrBlt > 0 && yrBlt < 1930)     { bLow=25000; bHigh=55000; bFlag={t:'RUBBLE BSMT <1930',c:'hot'}; }
+  else if (yrBlt >= 1930 && yrBlt < 1950) { bLow=15000; bHigh=35000; bFlag={t:'BLOCK BSMT 30-50s',c:'hot'}; }
+  else if (yrBlt >= 1950 && yrBlt < 1960) { bLow=8000;  bHigh=20000; bFlag={t:'BSMT CHECK 50s',c:'warn'}; }
+  else if (yrBlt >= 1960 && yrBlt < 1975) { bLow=2000;  bHigh=8000; }
+
+  const blockHits = hit(SIG_BLOCK, allRem);
+  if (blockHits.length > 0) {
+    bLow=Math.max(bLow,20000); bHigh=Math.max(bHigh,45000);
+    bFlag = {t:'BLOCK/RUBBLE CONFIRMED', c:'hot'};
+  }
+
+  const locP    = FLIP_ZONES.has(neigh) ? 1.05 : 1.0;
+  const arvLow  = Math.round(base * sqft * 0.92 * locP);
+  const arvHigh = Math.round(base * sqft * 1.10 * locP);
+  const renoLow = 40000 + bLow;
+  const renoHigh= 65000 + bHigh;
+  const closing = Math.round(price * 0.03);
+  const profLow = arvLow  - price - closing - renoLow;
+  const profHigh= arvHigh - price - closing - renoHigh;
+
+  let score = 0;
+  const flags = [];
+
+  // Price
+  if      (discount > 0.30) { score+=35; flags.push({t:'HOT DISCOUNT',c:'hot'}); }
+  else if (discount > 0.20) { score+=25; flags.push({t:'BELOW MARKET',c:'hot'}); }
+  else if (discount > 0.10) { score+=15; flags.push({t:'FAIR VALUE',c:'warn'}); }
+  else if (discount > 0)    { score+=5; }
+  else                      { flags.push({t:'AT/ABOVE MKT',c:'info'}); }
+
+  // DOM
+  if      (dom <= 3)  { score+=20; flags.push({t:'NEW',c:'hot'}); }
+  else if (dom <= 7)  { score+=15; flags.push({t:'FRESH '+dom+'d',c:'hot'}); }
+  else if (dom <= 14) { score+=10; flags.push({t:dom+'d DOM',c:'warn'}); }
+  else if (dom <= 30) { score+=5;  flags.push({t:dom+'d DOM',c:'info'}); }
+  else                {            flags.push({t:dom+'d DOM',c:'info'}); }
+
+  // Year
+  if      (yrBlt > 0 && yrBlt < 1930)     { score+=3;  score-=10; flags.push({t:''+yrBlt,c:'info'}); }
+  else if (yrBlt >= 1930 && yrBlt < 1950) { score+=6;  score-=5;  flags.push({t:''+yrBlt,c:'info'}); }
+  else if (yrBlt >= 1950 && yrBlt < 1960) { score+=10;            flags.push({t:''+yrBlt,c:'info'}); }
+  else if (yrBlt >= 1960 && yrBlt <= 1985){ score+=15;            flags.push({t:'SWEET SPOT '+yrBlt,c:'ok'}); }
+
+  if (bFlag) flags.push(bFlag);
+  if (FLIP_ZONES.has(neigh)) { score+=15; flags.push({t:'FLIP ZONE',c:'ok'}); }
+  if (beds >= 4) { score+=10; flags.push({t:beds+'BD/'+baths+'BA',c:'ok'}); }
+  else           { flags.push({t:beds+'BD/'+baths+'BA',c:'info'}); }
+  if (kitchens >= 2) { score+=10; flags.push({t:'SUITE',c:'ok'}); }
+
+  // Remarks
+  if (hasRem) {
+    const sh = hit(SIG_STRONG, allRem);
+    const fh = hit(SIG_FIXER,  allRem);
+    const rh = hit(SIG_RENTED, allRem);
+    const qh = hit(SIG_QUICK,  allRem);
+    const eh = hit(SIG_ESTATE, allRem);
+    if (sh.length) { score+=20; flags.push({t:'MOTIVATED: '+sh[0].toUpperCase(),c:'hot'}); }
+    if (fh.length) { score+=10; flags.push({t:'FIXER: '+fh[0].toUpperCase(),c:'warn'}); }
+    if (eh.length && !allRem.includes('estate sale')) { score+=12; flags.push({t:'ESTATE',c:'hot'}); }
+    if (qh.length) { score+=8;  flags.push({t:'QUICK POSSESSION',c:'hot'}); }
+    if (rh.length) { score+=5;  flags.push({t:'RENTED MECHANICAL',c:'warn'}); }
+    if (blockHits.length) score-=8;
+  } else {
+    flags.push({t:'NO REMARKS',c:'info'});
+  }
+
+  if      (profLow > 60000) score+=15;
+  else if (profLow > 30000) score+=8;
+  else if (profLow < 10000) { score-=5;  flags.push({t:'TIGHT MARGIN',c:'warn'}); }
+  else if (profLow < 0)     { score-=15; flags.push({t:'NEG MARGIN',c:'hot'}); }
+
+  const tier = score>=70?'A':score>=50?'B':score>=30?'C':'D';
+  const snippet = rRem.trim().slice(0,200) || pRem.trim().slice(0,200);
+
+  // Build expresshomes.ca URL
+  // Format: /property/421-{MLSNUM}-{address-slug}-SK
+  const slug = address.toLowerCase()
+    .replace(/#/g,'').replace(/[^a-z0-9\s-]/g,'')
+    .trim().replace(/\s+/g,'-').replace(/-+/g,'-');
+  const listingUrl = mlsNum
+    ? 'https://www.expresshomes.ca/property/421-' + mlsNum + '-' + slug + '-SK'
+    : '';
+
+  return { address, mlsNum, neigh, price, sqft, ppsf, beds, baths, dom, yrBlt,
+    base, discount, arvLow, arvHigh, profLow, profHigh, renoLow, renoHigh,
+    score, tier, flags, snippet, listingUrl };
+}
+
+function $m(n) { return n ? '$' + Math.round(n).toLocaleString() : '-'; }
+function $p(n) { return (n*100).toFixed(0)+'%'; }
+
+// ── CARD BUILDER (pure DOM — no template literals) ────────────────────────────
+function buildCard(r) {
+  const card = document.createElement('div');
+  card.className = 'card ' + r.tier;
+
+  // Badge
+  const badge = document.createElement('div');
+  badge.className = 'badge ' + r.tier;
+  badge.innerHTML = r.score + '<span class="badge-lbl">SCORE</span>';
+  card.appendChild(badge);
+
+  // Body
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  // Top row: address + MLS + OPEN LISTING button
+  const top = document.createElement('div');
+  top.className = 'card-top';
+
+  const addrEl = document.createElement('span');
+  addrEl.className = 'card-address';
+  addrEl.textContent = r.address;
+  top.appendChild(addrEl);
+
+  if (r.mlsNum) {
+    const mlsEl = document.createElement('span');
+    mlsEl.className = 'card-mls';
+    mlsEl.textContent = r.mlsNum;
+    top.appendChild(mlsEl);
+  }
+
+  if (r.listingUrl) {
+    const btn = document.createElement('a');
+    btn.className = 'btn-listing';
+    btn.textContent = 'OPEN LISTING';
+    btn.href = r.listingUrl;
+    btn.target = '_blank';
+    btn.rel = 'noopener noreferrer';
+    top.appendChild(btn);
+  }
+
+  body.appendChild(top);
+
+  // Meta row
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+
+  const domColor = r.dom<=7?'#f55050':r.dom<=21?'#f0a040':'#6b7280';
+  const domPct   = Math.min(100,(r.dom/60)*100);
+
+  meta.innerHTML =
+    '<span>&#128205; ' + r.neigh + '</span>' +
+    '<span>' + (r.sqft ? r.sqft.toLocaleString()+' sqft' : '&mdash;') + '</span>' +
+    '<span>&#128197; ' + (r.yrBlt||'&mdash;') + '</span>' +
+    '<span><div class="dom-wrap"><div class="dom-bar"><div class="dom-fill" style="width:'+domPct+'%;background:'+domColor+'"></div></div><span style="color:'+domColor+';font-family:monospace;font-size:11px">'+r.dom+'d</span></div></span>';
+  body.appendChild(meta);
+
+  // Flags
+  const flagWrap = document.createElement('div');
+  flagWrap.className = 'flags';
+  r.flags.forEach(f => {
+    const el = document.createElement('span');
+    el.className = 'flag ' + f.c;
+    el.textContent = f.t;
+    flagWrap.appendChild(el);
+  });
+  body.appendChild(flagWrap);
+
+  // Remark snippet
+  if (r.snippet) {
+    const rem = document.createElement('div');
+    rem.className = 'remark';
+    rem.textContent = '\u201c' + r.snippet.slice(0,200) + (r.snippet.length>200?'\u2026':'') + '\u201d';
+    body.appendChild(rem);
+  }
+
+  card.appendChild(body);
+
+  // Numbers column
+  const nums = document.createElement('div');
+  nums.className = 'card-nums';
+
+  const discClass = r.discount>0.20?'hot':r.discount>0.08?'warm':'fair';
+  const discLabel = r.discount>0 ? '-'+$p(r.discount)+' vs mkt' : '+'+$p(-r.discount)+' vs mkt';
+  const profColor = r.profLow>50000?'#3de8a0':r.profLow>20000?'#f0a040':'#f55050';
+
+  nums.innerHTML =
+    '<div class="num-row"><div class="num-val">' + $m(r.price) + '</div><div class="num-lbl">List Price</div></div>' +
+    '<div class="pill ' + discClass + '">' + discLabel + '</div>' +
+    '<div class="arv">ARV <b>' + $m(r.arvLow) + '&ndash;' + $m(r.arvHigh) + '</b></div>' +
+    '<div class="reno-note">Reno+bsmt: ' + $m(r.renoLow) + '&ndash;' + $m(r.renoHigh) + '</div>' +
+    '<div class="num-row"><div class="num-val" style="color:'+profColor+';font-size:13px">' + $m(r.profLow) + '&ndash;' + $m(r.profHigh) + '</div><div class="num-lbl">Est. Gross Profit</div></div>';
+
+  card.appendChild(nums);
+  return card;
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+let allScored = [];
+
+function renderCards() {
+  const minScore = parseInt(document.getElementById('minScore').value) || 0;
+  const maxPrice = parseInt(document.getElementById('maxPrice').value) || 999999;
+  const sortBy   = document.getElementById('sortBy').value;
+
+  let list = allScored.filter(r => r.score >= minScore && r.price <= maxPrice);
+  if      (sortBy === 'dom')      list.sort((a,b) => a.dom - b.dom);
+  else if (sortBy === 'discount') list.sort((a,b) => b.discount - a.discount);
+  else if (sortBy === 'profit')   list.sort((a,b) => b.profLow - a.profLow);
+  else                            list.sort((a,b) => b.score - a.score);
+
+  const area = document.getElementById('cardArea');
+  area.innerHTML = '';
+
+  if (!list.length) {
+    area.innerHTML = '<div class="empty">No listings match current filters.</div>';
+    return;
+  }
+
+  const tiers = [
+    {key:'A', label:'&#128293; HOT &mdash; Act Now',      color:'#f55050'},
+    {key:'B', label:'&#128993; WARM &mdash; Worth a Look', color:'#f0a040'},
+    {key:'C', label:'&#128064; WATCH &mdash; Keep an Eye', color:'#3de8a0'},
+    {key:'D', label:'&#9633; Others',                       color:'#6b7280'},
+  ];
+
+  tiers.forEach(({key, label, color}) => {
+    const group = list.filter(r => r.tier === key);
+    if (!group.length) return;
+
+    const hdr = document.createElement('div');
+    hdr.className = 'section-hdr';
+    hdr.style.color = color;
+    hdr.innerHTML = label + ' <span style="color:#6b7280;font-size:10px">(' + group.length + ')</span>';
+    area.appendChild(hdr);
+
+    group.forEach(r => area.appendChild(buildCard(r)));
+  });
+}
+
+function processFile(file) {
+  if (!file || !file.name.endsWith('.csv')) { alert('Please upload a .csv file'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const rows = parseCSV(e.target.result);
+    allScored = rows.map(scoreRow).filter(Boolean);
+    allScored.sort((a,b) => b.score - a.score);
+
+    document.getElementById('sTotal').textContent = allScored.length;
+    document.getElementById('sHot').textContent   = allScored.filter(r=>r.tier==='A').length;
+    document.getElementById('sWarm').textContent  = allScored.filter(r=>r.tier==='B').length;
+    document.getElementById('sWatch').textContent = allScored.filter(r=>r.tier==='C').length;
+    document.getElementById('statsBar').style.display = 'flex';
+    document.getElementById('uploadSection').style.display = 'none';
+    document.getElementById('toolbar').style.display = 'block';
+    renderCards();
+  };
+  reader.readAsText(file);
+}
+
+// ── EVENTS ───────────────────────────────────────────────────────────────────
+document.getElementById('dropZone').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', e => processFile(e.target.files[0]));
+
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  processFile(e.dataTransfer.files[0]);
+});
+
+document.getElementById('minScore').addEventListener('input', e => {
+  document.getElementById('scoreDisplay').textContent = e.target.value;
+  renderCards();
+});
+document.getElementById('maxPrice').addEventListener('change', renderCards);
+document.getElementById('sortBy').addEventListener('change', renderCards);
+document.getElementById('btnReset').addEventListener('click', () => {
+  allScored = [];
+  document.getElementById('uploadSection').style.display = 'block';
+  document.getElementById('toolbar').style.display = 'none';
+  document.getElementById('statsBar').style.display = 'none';
+  document.getElementById('cardArea').innerHTML = '';
+});
+</script>
+</body>
+</html>
